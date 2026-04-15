@@ -1,0 +1,21 @@
+===== REGISTRO DE INVESTIMENTOS =====
+Data de geração: 2026-03-03T15:49:16.499165500
+Total de ativos: 2
+=====================================
+
+ATIVO: BTC
+  ID: 1
+  Quantidade: 0.5
+  Preço Médio: R$ 120000,00
+  Valor Investido: R$ 60000,00
+  Carteira ID: 1
+-------------------------------------
+ATIVO: ETH
+  ID: 2
+  Quantidade: 3.0
+  Preço Médio: R$ 8000,00
+  Valor Investido: R$ 24000,00
+  Carteira ID: 2
+-------------------------------------
+
+===== FIM DO ARQUIVO =====

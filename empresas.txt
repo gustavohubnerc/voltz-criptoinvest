@@ -1,0 +1,22 @@
+===== REGISTRO DE EMPRESAS =====
+Data de geração: 2026-03-03T15:49:16.504712800
+Total de empresas: 3
+================================
+
+ID: 1
+Razão Social: Tech Investimentos LTDA
+CNPJ: 11.111.111/0001-11
+Saldo Total: R$ 0,00
+--------------------------------
+ID: 2
+Razão Social: Crypto Corp SA
+CNPJ: 22.222.222/0001-22
+Saldo Total: R$ 0,00
+--------------------------------
+ID: 4
+Razão Social: Digital Assets Inc
+CNPJ: 44.444.444/0001-44
+Saldo Total: R$ 0,00
+--------------------------------
+
+===== FIM DO ARQUIVO =====
