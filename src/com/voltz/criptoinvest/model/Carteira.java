@@ -52,6 +52,7 @@ public class Carteira {
     }
 
     public Carteira(long idCarteira) {
+        this.id = idCarteira;
     }
 
     // Métodos de negócio
