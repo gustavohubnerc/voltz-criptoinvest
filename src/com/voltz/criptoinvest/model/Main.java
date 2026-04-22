@@ -1,9 +1,10 @@
 package com.voltz.criptoinvest.model;
 
-import com.voltz.criptoinvest.dao.EmpresaDAO;
+import com.voltz.criptoinvest.dao.*;
 import com.voltz.criptoinvest.exception.EntidadeNaoEncontradaException;
 
 import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static com.voltz.criptoinvest.db.OracleConnectionFactory.testarConexao;
@@ -12,226 +13,206 @@ public class Main {
 
     public static void main(String[] args) {
         System.out.println("╔══════════════════════════════════════════════════╗");
-        System.out.println("║   SISTEMA DE GESTÃO DE CRIPTOINVESTIMENTOS      ║");
-        System.out.println("║   Teste de Integração com Banco de Dados Oracle ║");
+        System.out.println("║   SISTEMA DE GESTÃO DE CRIPTOINVESTIMENTOS       ║");
+        System.out.println("║   Teste de Integração com Banco de Dados Oracle  ║");
         System.out.println("╚══════════════════════════════════════════════════╝\n");
 
-        // --- Teste de conexão ---
         System.out.println("=== ETAPA 0: TESTE DE CONEXÃO ===");
         try {
             testarConexao();
         } catch (Exception e) {
             System.err.println("✗ Falha na conexão com o banco. Encerrando testes.");
-            System.err.println("  Erro: " + e.getMessage());
+            e.printStackTrace();
             return;
         }
         System.out.println();
 
-        // --- Instanciar o DAO ---
-        EmpresaDAO dao;
-        try {
-            dao = new EmpresaDAO();
-        } catch (SQLException e) {
-            System.err.println("✗ Não foi possível criar o EmpresaDAO: " + e.getMessage());
-            return;
-        }
+        EmpresaDAO empresaDAO = null;
+        UsuarioDAO usuarioDAO = new UsuarioDAO();
+        CarteiraDAO carteiraDAO = new CarteiraDAO();
+        InvestimentoDAO investimentoDAO = new InvestimentoDAO();
+        RelatorioDAO relatorioDAO = new RelatorioDAO();
+        TransacaoDAO transacaoDAO = new TransacaoDAO();
+        RelatorioInvestimentoDAO relatorioInvestimentoDAO = new RelatorioInvestimentoDAO();
 
-        // --- Executar todos os testes em sequência ---
         try {
-            Long idCriado = testarCadastro(dao);
-            testarListagem(dao);
+            empresaDAO = new EmpresaDAO();
 
-            if (idCriado != null) {
-                testarPesquisaPorId(dao, idCriado);
-                testarAtualizacao(dao, idCriado);
-                testarRemocao(dao, idCriado);
-            } else {
-                System.out.println("\n⚠ Pulando testes de pesquisa, atualização e remoção (cadastro não retornou ID).");
-                // Tenta com um ID fixo caso existam dados no banco
-                testarPesquisaPorId(dao, 1L);
-            }
-        } finally {
-            // --- Fechar conexão ---
+            // IDs que vamos preencher durante a criação
+            Long idEmpresa = null;
+            Long idUsuario = null;
+            Long idCarteira = null;
+            Long idInvestimento = null;
+            Long idRelatorio = null;
+            Long idTransacao = null;
+
+            System.out.println("=== ETAPA 1: TESTE DE INSERÇÃO E LEITURA (CREATE & READ) ===");
+            
+            // 1. Empresa
             try {
-                dao.fecharConexao();
-                System.out.println("\n✓ Conexão com o banco fechada com sucesso.");
-            } catch (SQLException e) {
-                System.err.println("\n✗ Erro ao fechar conexão: " + e.getMessage());
+                Empresa empresa = new Empresa("11222333000199", "Empresa Holding Cripto");
+                empresaDAO.cadastrarEmpresa(empresa);
+                for (Empresa e : empresaDAO.listarEmpresas()) {
+                    if (e.getCnpj().equals("11222333000199")) idEmpresa = e.getId();
+                }
+                if (idEmpresa != null) System.out.println("✓ Empresa criada (ID: " + idEmpresa + ")");
+            } catch (SQLException e) { System.err.println("Erro Empresa: " + e.getMessage()); }
+
+            if (idEmpresa == null) throw new RuntimeException("Falha ao criar Empresa base, abortando restante.");
+
+            // 2. Usuario
+            try {
+                Usuario usuario = new Usuario(null, "João Cripto", "joao@cripto.com", "hash123", "ADMIN", idEmpresa);
+                usuarioDAO.cadastrar(usuario);
+                for (Usuario u : usuarioDAO.listarTodos()) {
+                    if (u.getEmail().equals("joao@cripto.com")) idUsuario = u.getId();
+                }
+                if (idUsuario != null) System.out.println("✓ Usuario criado (ID: " + idUsuario + ")");
+            } catch (SQLException e) { System.err.println("Erro Usuario: " + e.getMessage()); }
+
+            // 3. Carteira
+            try {
+                Carteira carteira = new Carteira(null, "0xABC123", "Binance", 1000.50, idEmpresa);
+                carteiraDAO.cadastrar(carteira);
+                for (Carteira c : carteiraDAO.listarTodos()) {
+                    if (c.getEndereco().equals("0xABC123")) idCarteira = c.getId();
+                }
+                if (idCarteira != null) System.out.println("✓ Carteira criada (ID: " + idCarteira + ")");
+            } catch (SQLException e) { System.err.println("Erro Carteira: " + e.getMessage()); }
+
+            // 4. Investimento
+            try {
+                if (idCarteira != null) {
+                    Investimento investimento = new Investimento(null, "BTC", 0.5, 60000.0, idCarteira);
+                    investimentoDAO.cadastrar(investimento);
+                    for (Investimento inv : investimentoDAO.listarTodos()) {
+                        if (inv.getAtivo().equals("BTC") && inv.getCarteiraId().equals(idCarteira)) idInvestimento = inv.getId();
+                    }
+                    if (idInvestimento != null) System.out.println("✓ Investimento criado (ID: " + idInvestimento + ")");
+                }
+            } catch (SQLException e) { System.err.println("Erro Investimento: " + e.getMessage()); }
+
+            // 5. Relatorio
+            try {
+                if (idUsuario != null) {
+                    Relatorio relatorio = new Relatorio(null, "Relatorio Q1", LocalDateTime.now(), "TRIMESTRAL", idEmpresa, idUsuario);
+                    relatorioDAO.cadastrar(relatorio);
+                    for (Relatorio r : relatorioDAO.listarTodos()) {
+                        if (r.getTitulo().equals("Relatorio Q1")) idRelatorio = r.getId();
+                    }
+                    if (idRelatorio != null) System.out.println("✓ Relatorio criado (ID: " + idRelatorio + ")");
+                }
+            } catch (SQLException e) { System.err.println("Erro Relatorio: " + e.getMessage()); }
+
+            // 6. Transacao
+            try {
+                if (idCarteira != null && idUsuario != null) {
+                    Transacao transacao = new Transacao(null, "COMPRA", "BTC", 0.1, 61000.0, LocalDateTime.now(), "CONCLUIDA", idCarteira, idUsuario, idInvestimento);
+                    transacaoDAO.cadastrar(transacao);
+                    for (Transacao t : transacaoDAO.listarTodos()) {
+                        if (t.getAtivo().equals("BTC") && "COMPRA".equals(t.getTipo())) idTransacao = t.getId();
+                    }
+                    if (idTransacao != null) System.out.println("✓ Transacao criada (ID: " + idTransacao + ")");
+                }
+            } catch (SQLException e) { System.err.println("Erro Transacao: " + e.getMessage()); }
+
+            // 7. RelatorioInvestimento
+            try {
+                if (idRelatorio != null && idInvestimento != null) {
+                    RelatorioInvestimento ri = new RelatorioInvestimento(idRelatorio, idInvestimento, LocalDateTime.now(), 62000.0, "Alta no fechamento");
+                    relatorioInvestimentoDAO.cadastrar(ri);
+                    System.out.println("✓ RelatorioInvestimento criado (Relatorio: " + idRelatorio + ", Investimento: " + idInvestimento + ")");
+                }
+            } catch (SQLException e) { System.err.println("Erro RelatorioInvestimento: " + e.getMessage()); }
+
+            System.out.println("\n=== ETAPA 2: TESTE DE ATUALIZAÇÃO (UPDATE) ===");
+            try {
+                if (idRelatorio != null && idInvestimento != null) {
+                    RelatorioInvestimento ri = relatorioInvestimentoDAO.buscar(idRelatorio, idInvestimento);
+                    ri.setObservacoes("Atualizado: Alta de 5%");
+                    relatorioInvestimentoDAO.atualizar(ri);
+                    System.out.println("✓ RelatorioInvestimento atualizado.");
+                }
+
+                if (idTransacao != null) {
+                    Transacao t = transacaoDAO.buscarPorId(idTransacao);
+                    t.setStatus("CANCELADA");
+                    transacaoDAO.atualizar(t);
+                    System.out.println("✓ Transacao atualizada.");
+                }
+
+                if (idRelatorio != null) {
+                    Relatorio r = relatorioDAO.buscarPorId(idRelatorio);
+                    r.setTipo("MENSAL");
+                    relatorioDAO.atualizar(r);
+                    System.out.println("✓ Relatorio atualizado.");
+                }
+
+                if (idInvestimento != null) {
+                    Investimento i = investimentoDAO.buscarPorId(idInvestimento);
+                    i.setQuantidade(0.8);
+                    investimentoDAO.atualizar(i);
+                    System.out.println("✓ Investimento atualizado.");
+                }
+
+                if (idCarteira != null) {
+                    Carteira c = carteiraDAO.buscarPorId(idCarteira);
+                    c.setSaldo(2000.0);
+                    carteiraDAO.atualizar(c);
+                    System.out.println("✓ Carteira atualizada.");
+                }
+
+                if (idUsuario != null) {
+                    Usuario u = usuarioDAO.buscarPorId(idUsuario);
+                    u.setPapel("GESTOR");
+                    usuarioDAO.atualizar(u);
+                    System.out.println("✓ Usuario atualizado.");
+                }
+
+                if (idEmpresa != null) {
+                    Empresa e = empresaDAO.pesquisarEmpresa(idEmpresa);
+                    e.setRazaoSocial("Empresa Holding Editada");
+                    empresaDAO.atualizarEmpresa(e);
+                    System.out.println("✓ Empresa atualizada.");
+                }
+
+            } catch (Exception e) {
+                System.err.println("Erro em Atualizacao: " + e.getMessage());
+            }
+
+            System.out.println("\n=== ETAPA 3: TESTE DE EXCLUSÃO (DELETE) ===");
+            try {
+                if (idRelatorio != null && idInvestimento != null) {
+                    relatorioInvestimentoDAO.remover(idRelatorio, idInvestimento);
+                    System.out.println("✓ RelatorioInvestimento removido.");
+                }
+                if (idTransacao != null) { transacaoDAO.remover(idTransacao); System.out.println("✓ Transacao removida."); }
+                if (idRelatorio != null) { relatorioDAO.remover(idRelatorio); System.out.println("✓ Relatorio removido."); }
+                if (idInvestimento != null) { investimentoDAO.remover(idInvestimento); System.out.println("✓ Investimento removido."); }
+                if (idCarteira != null) { carteiraDAO.remover(idCarteira); System.out.println("✓ Carteira removida."); }
+                if (idUsuario != null) { usuarioDAO.remover(idUsuario); System.out.println("✓ Usuario removido."); }
+                if (idEmpresa != null) { empresaDAO.removerEmpresa(idEmpresa); System.out.println("✓ Empresa removida."); }
+            } catch (Exception e) {
+                System.err.println("Erro na exclusão em cadeia: " + e.getMessage());
+            }
+
+        } catch (SQLException e) {
+            System.err.println("Erro geral de SQL: " + e.getMessage());
+        } catch (RuntimeException re) {
+            System.err.println(re.getMessage());
+        } finally {
+            if (empresaDAO != null) {
+                try {
+                    empresaDAO.fecharConexao();
+                    System.out.println("\n✓ Conexão com o banco fechada com sucesso.");
+                } catch (SQLException e) {
+                    System.err.println("\n✗ Erro ao fechar conexão: " + e.getMessage());
+                }
             }
         }
 
         System.out.println("\n╔══════════════════════════════════════════════════╗");
-        System.out.println("║   TESTES FINALIZADOS                             ║");
+        System.out.println("║   TESTES FINALIZADOS COM SUCESSO                 ║");
         System.out.println("╚══════════════════════════════════════════════════╝");
-    }
-
-    // ====================================================================
-    // MÉTODO 1: Testar CADASTRO (INSERT)
-    // ====================================================================
-    /**
-     * Testa a inserção de uma nova empresa no banco de dados.
-     * 
-     * @param dao instância de EmpresaDAO
-     * @return o ID da empresa criada (obtido via listagem), ou null se não for
-     *         possível recuperar
-     */
-    private static Long testarCadastro(EmpresaDAO dao) {
-        System.out.println("=== ETAPA 1: TESTE DE CADASTRO (INSERT) ===");
-        try {
-            Empresa novaEmpresa = new Empresa("99999999000199", "Empresa Teste LTDA");
-            dao.cadastrarEmpresa(novaEmpresa);
-            System.out.println("✓ Empresa cadastrada com sucesso!");
-            System.out.println("  CNPJ: " + novaEmpresa.getCnpj());
-            System.out.println("  Razão Social: " + novaEmpresa.getRazaoSocial());
-
-            // Recuperar o ID da empresa recém-criada buscando na listagem
-            List<Empresa> todas = dao.listarEmpresas();
-            for (Empresa emp : todas) {
-                if ("99.999.999/0001-99".equals(emp.getCnpj())) {
-                    System.out.println("  ID gerado pelo banco: " + emp.getId());
-                    return emp.getId();
-                }
-            }
-            System.out.println("  ⚠ Empresa inserida, mas não foi possível recuperar o ID.");
-            return null;
-
-        } catch (SQLException e) {
-            System.err.println("✗ Erro ao cadastrar empresa: " + e.getMessage());
-            return null;
-        }
-    }
-
-    // ====================================================================
-    // MÉTODO 2: Testar LISTAGEM (SELECT ALL)
-    // ====================================================================
-    /**
-     * Testa a listagem de todas as empresas cadastradas no banco.
-     * 
-     * @param dao instância de EmpresaDAO
-     */
-    private static void testarListagem(EmpresaDAO dao) {
-        System.out.println("\n=== ETAPA 2: TESTE DE LISTAGEM (SELECT ALL) ===");
-        try {
-            List<Empresa> empresas = dao.listarEmpresas();
-            if (empresas.isEmpty()) {
-                System.out.println("  ⚠ Nenhuma empresa encontrada no banco.");
-            } else {
-                System.out.println("✓ Total de empresas encontradas: " + empresas.size());
-                System.out.println("  ┌──────┬────────────────────┬──────────────────────────────────┐");
-                System.out.println("  │  ID  │       CNPJ         │         RAZÃO SOCIAL             │");
-                System.out.println("  ├──────┼────────────────────┼──────────────────────────────────┤");
-                for (Empresa emp : empresas) {
-                    System.out.printf("  │ %4d │ %-18s │ %-32s │%n",
-                            emp.getId(), emp.getCnpj(), emp.getRazaoSocial());
-                }
-                System.out.println("  └──────┴────────────────────┴──────────────────────────────────┘");
-            }
-        } catch (SQLException e) {
-            System.err.println("✗ Erro ao listar empresas: " + e.getMessage());
-        }
-    }
-
-    // ====================================================================
-    // MÉTODO 3: Testar PESQUISA POR ID (SELECT WHERE)
-    // ====================================================================
-    /**
-     * Testa a pesquisa de uma empresa específica pelo ID.
-     * 
-     * @param dao instância de EmpresaDAO
-     * @param id  ID da empresa a ser pesquisada
-     */
-    private static void testarPesquisaPorId(EmpresaDAO dao, Long id) {
-        System.out.println("\n=== ETAPA 3: TESTE DE PESQUISA POR ID (SELECT WHERE id = " + id + ") ===");
-        try {
-            Empresa empresa = dao.pesquisarEmpresa(id);
-            System.out.println("✓ Empresa encontrada:");
-            System.out.println("  ID: " + empresa.getId());
-            System.out.println("  CNPJ: " + empresa.getCnpj());
-            System.out.println("  Razão Social: " + empresa.getRazaoSocial());
-
-        } catch (EntidadeNaoEncontradaException e) {
-            System.err.println("✗ Empresa com ID " + id + " não encontrada: " + e.getMessage());
-        } catch (SQLException e) {
-            System.err.println("✗ Erro ao pesquisar empresa: " + e.getMessage());
-        }
-    }
-
-    // ====================================================================
-    // MÉTODO 4: Testar ATUALIZAÇÃO (UPDATE)
-    // ====================================================================
-    /**
-     * Testa a atualização dos dados de uma empresa existente.
-     * Altera CNPJ e Razão Social, depois verifica se a mudança foi persistida.
-     * 
-     * @param dao instância de EmpresaDAO
-     * @param id  ID da empresa a ser atualizada
-     */
-    private static void testarAtualizacao(EmpresaDAO dao, Long id) {
-        System.out.println("\n=== ETAPA 4: TESTE DE ATUALIZAÇÃO (UPDATE) ===");
-        try {
-            // Buscar empresa original
-            Empresa empresa = dao.pesquisarEmpresa(id);
-            String cnpjOriginal = empresa.getCnpj();
-            String razaoOriginal = empresa.getRazaoSocial();
-
-            System.out.println("  Antes da atualização:");
-            System.out.println("    CNPJ: " + cnpjOriginal);
-            System.out.println("    Razão Social: " + razaoOriginal);
-
-            // Alterar dados
-            empresa.setCnpj("88.888.888/0001-88");
-            empresa.setRazaoSocial("Empresa Atualizada Teste LTDA");
-            dao.atualizarEmpresa(empresa);
-
-            // Verificar se a atualização foi persistida
-            Empresa empresaAtualizada = dao.pesquisarEmpresa(id);
-            System.out.println("\n  Depois da atualização:");
-            System.out.println("    CNPJ: " + empresaAtualizada.getCnpj());
-            System.out.println("    Razão Social: " + empresaAtualizada.getRazaoSocial());
-
-            // Validar
-            if ("88.888.888/0001-88".equals(empresaAtualizada.getCnpj()) &&
-                    "Empresa Atualizada Teste LTDA".equals(empresaAtualizada.getRazaoSocial())) {
-                System.out.println("\n✓ Atualização verificada com sucesso! Dados foram persistidos.");
-            } else {
-                System.out.println("\n⚠ Atualização executada, mas a verificação não conferiu.");
-            }
-
-        } catch (EntidadeNaoEncontradaException e) {
-            System.err.println("✗ Empresa com ID " + id + " não encontrada para atualização: " + e.getMessage());
-        } catch (SQLException e) {
-            System.err.println("✗ Erro ao atualizar empresa: " + e.getMessage());
-        }
-    }
-
-    // ====================================================================
-    // MÉTODO 5: Testar REMOÇÃO (DELETE)
-    // ====================================================================
-    /**
-     * Testa a remoção de uma empresa do banco de dados e verifica se foi realmente
-     * excluída.
-     * 
-     * @param dao instância de EmpresaDAO
-     * @param id  ID da empresa a ser removida
-     */
-    private static void testarRemocao(EmpresaDAO dao, Long id) {
-        System.out.println("\n=== ETAPA 5: TESTE DE REMOÇÃO (DELETE) ===");
-        try {
-            dao.removerEmpresa(id);
-            System.out.println("✓ Empresa com ID " + id + " removida com sucesso!");
-
-            // Verificar se a empresa realmente foi excluída
-            try {
-                dao.pesquisarEmpresa(id);
-                System.out.println("⚠ Atenção: empresa ainda encontrada após remoção!");
-            } catch (EntidadeNaoEncontradaException e) {
-                System.out.println("✓ Verificação confirmada: empresa não existe mais no banco.");
-            }
-
-        } catch (EntidadeNaoEncontradaException e) {
-            System.err.println("✗ Empresa com ID " + id + " não encontrada para remoção: " + e.getMessage());
-        } catch (SQLException e) {
-            System.err.println("✗ Erro ao remover empresa: " + e.getMessage());
-        }
     }
 }
