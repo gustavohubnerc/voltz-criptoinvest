@@ -95,7 +95,7 @@ public class Main {
             // 5. Relatorio
             try {
                 if (idUsuario != null) {
-                    Relatorio relatorio = new Relatorio(null, "Relatorio Q1", LocalDateTime.now(), "TRIMESTRAL", idEmpresa, idUsuario);
+                    Relatorio relatorio = new Relatorio(null, "Relatorio Q1", LocalDateTime.now(), "PERFORMANCE", idEmpresa, idUsuario);
                     relatorioDAO.cadastrar(relatorio);
                     for (Relatorio r : relatorioDAO.listarTodos()) {
                         if (r.getTitulo().equals("Relatorio Q1")) idRelatorio = r.getId();
@@ -107,7 +107,7 @@ public class Main {
             // 6. Transacao
             try {
                 if (idCarteira != null && idUsuario != null) {
-                    Transacao transacao = new Transacao(null, "COMPRA", "BTC", 0.1, 61000.0, LocalDateTime.now(), "CONCLUIDA", idCarteira, idUsuario, idInvestimento);
+                    Transacao transacao = new Transacao(null, "COMPRA", "BTC", 0.1, 61000.0, LocalDateTime.now(), "CONFIRMADA", idCarteira, idUsuario, idInvestimento);
                     transacaoDAO.cadastrar(transacao);
                     for (Transacao t : transacaoDAO.listarTodos()) {
                         if (t.getAtivo().equals("BTC") && "COMPRA".equals(t.getTipo())) idTransacao = t.getId();
@@ -143,7 +143,7 @@ public class Main {
 
                 if (idRelatorio != null) {
                     Relatorio r = relatorioDAO.buscarPorId(idRelatorio);
-                    r.setTipo("MENSAL");
+                    r.setTipo("CONSOLIDADO");
                     relatorioDAO.atualizar(r);
                     System.out.println("✓ Relatorio atualizado.");
                 }
